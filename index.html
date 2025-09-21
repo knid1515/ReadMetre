@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>โปรแกรมอ่านตัวเลขจากภาพ</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;700&display=swap" rel="stylesheet">
+    
+    <script src='https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js'></script>
+
+    <style>
+        :root {
+            --primary-color: #007bff;
+            --light-gray: #f8f9fa;
+            --dark-gray: #343a40;
+            --border-color: #dee2e6;
+            --white: #ffffff;
+            --shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+
+        body {
+            font-family: 'Sarabun', sans-serif;
+            background-color: var(--light-gray);
+            color: var(--dark-gray);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 1rem;
+            box-sizing: border-box;
+        }
+
+        .container {
+            background-color: var(--white);
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: var(--shadow);
+            width: 100%;
+            max-width: 600px;
+            text-align: center;
+        }
+
+        h1 {
+            color: var(--primary-color);
+            margin-bottom: 1.5rem;
+        }
+
+        .uploader-area {
+            border: 2px dashed var(--border-color);
+            border-radius: 8px;
+            padding: 2rem;
+            margin-bottom: 1.5rem;
+            cursor: pointer;
+            transition: background-color 0.3s, border-color 0.3s;
+        }
+        
+        .uploader-area:hover {
+            background-color: #f1f5ff;
+            border-color: var(--primary-color);
+        }
+        
+        .uploader-area p {
+            margin: 0;
+            font-size: 1.1rem;
+            color: #6c757d;
+        }
+
+        input[type="file"] {
+            display: none;
+        }
+
+        button {
+            background-color: var(--primary-color);
+            color: var(--white);
+            border: none;
+            border-radius: 8px;
+            padding: 0.8rem 1.5rem;
+            font-size: 1rem;
+            font-family: 'Sarabun', sans-serif;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            width: 100%;
+        }
+
+        button:disabled {
+            background-color: #a0c7ff;
+            cursor: not-allowed;
+        }
+
+        button:hover:not(:disabled) {
+            background-color: #0056b3;
+        }
+        
+        #image-preview {
+            max-width: 100%;
+            max-height: 250px;
+            margin-top: 1.5rem;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            display: none; /* ซ่อนไว้จนกว่าจะเลือกรูป */
+        }
+
+        .result-area {
+            margin-top: 2rem;
+            text-align: left;
+        }
+        
+        #status {
+            font-weight: 500;
+            margin-bottom: 1rem;
+            color: #6c757d;
+        }
+        
+        #result-text {
+            background-color: var(--light-gray);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 1rem;
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: var(--primary-color);
+            min-height: 50px;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>โปรแกรมอ่านตัวเลขจากภาพ</h1>
+        
+        <div class="uploader-area" id="uploader-area">
+             <input type="file" id="image-input" accept="image/*">
+             <p>คลิกเพื่อเลือก หรือลากไฟล์ภาพมาวางที่นี่</p>
+        </div>
+
+        <button id="run-button" disabled>อ่านตัวเลขจากภาพ</button>
+
+        <img id="image-preview" src="#" alt="ตัวอย่างภาพ">
+
+        <div class="result-area">
+            <p id="status">สถานะ: กรุณาเลือกรูปภาพ</p>
+            <div id="result-text"></div>
+        </div>
+    </div>
+
+    <script>
+        // === DOM Elements ===
+        const imageInput = document.getElementById('image-input');
+        const uploaderArea = document.getElementById('uploader-area');
+        const runButton = document.getElementById('run-button');
+        const imagePreview = document.getElementById('image-preview');
+        const statusDisplay = document.getElementById('status');
+        const resultText = document.getElementById('result-text');
+
+        let selectedFile = null;
+
+        // === Event Listeners ===
+
+        // ทำให้สามารถคลิกที่กรอบเพื่อเลือกไฟล์ได้
+        uploaderArea.addEventListener('click', () => imageInput.click());
+
+        // จัดการเมื่อมีการเลือกไฟล์
+        imageInput.addEventListener('change', (event) => {
+            const files = event.target.files;
+            if (files && files.length > 0) {
+                selectedFile = files[0];
+
+                // แสดงรูปภาพตัวอย่าง
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    imagePreview.src = e.target.result;
+                    imagePreview.style.display = 'block';
+                };
+                reader.readAsDataURL(selectedFile);
+                
+                // อัปเดต UI
+                uploaderArea.querySelector('p').textContent = `ไฟล์ที่เลือก: ${selectedFile.name}`;
+                statusDisplay.textContent = 'สถานะ: พร้อมทำงาน';
+                resultText.textContent = '';
+                runButton.disabled = false;
+            }
+        });
+
+        // จัดการเมื่อกดปุ่ม "อ่านตัวเลข"
+        runButton.addEventListener('click', async () => {
+            if (!selectedFile) {
+                alert('กรุณาเลือกรูปภาพก่อนครับ');
+                return;
+            }
+
+            // ปิดการใช้งานปุ่มและล้างผลลัพธ์เก่า
+            runButton.disabled = true;
+            resultText.textContent = '';
+            statusDisplay.textContent = 'สถานะ: กำลังเตรียมการ...';
+
+            // เริ่มทำงานกับ Tesseract.js
+            try {
+                const scheduler = Tesseract.createScheduler();
+                const worker = await Tesseract.createWorker('eng', 1, {
+                    logger: m => {
+                        // อัปเดตสถานะการทำงานให้ผู้ใช้เห็น
+                        if (m.status === 'recognizing text') {
+                           const progress = (m.progress * 100).toFixed(2);
+                           statusDisplay.textContent = `สถานะ: กำลังวิเคราะห์... ${progress}%`;
+                        } else {
+                           statusDisplay.textContent = `สถานะ: ${m.status}...`;
+                        }
+                    },
+                });
+
+                // ตั้งค่าให้ Tesseract อ่านเฉพาะตัวเลขและสัญลักษณ์ที่เกี่ยวข้อง
+                // เพื่อเพิ่มความแม่นยำ
+                await worker.setParameters({
+                    tessedit_char_whitelist: '0123456789.,-/', 
+                });
+
+                scheduler.addWorker(worker);
+
+                // เริ่มกระบวนการ OCR
+                const { data: { text } } = await scheduler.addJob('recognize', selectedFile);
+                
+                // แสดงผลลัพธ์
+                resultText.textContent = text || 'ไม่พบตัวเลขในภาพ';
+                statusDisplay.textContent = 'สถานะ: การประมวลผลเสร็จสิ้น!';
+
+                // ปิดการทำงานของ worker เพื่อคืนหน่วยความจำ
+                await scheduler.terminate();
+
+            } catch (error) {
+                console.error(error);
+                statusDisplay.textContent = 'สถานะ: เกิดข้อผิดพลาด!';
+                resultText.textContent = 'ไม่สามารถประมวลผลภาพได้ กรุณาลองใหม่อีกครั้ง';
+            } finally {
+                // เปิดใช้งานปุ่มอีกครั้ง
+                runButton.disabled = false;
+            }
+        });
+    </script>
+</body>
+</html>
