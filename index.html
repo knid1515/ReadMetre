@@ -3,9 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>โปรแกรมอ่านตัวเลขจากภาพ</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <title>โปรแกรมอ่านตัวอักษรและตัวเลขจากภาพ</title> <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;700&display=swap" rel="stylesheet">
     
     <script src='https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js'></script>
@@ -101,7 +100,7 @@
             margin-top: 1.5rem;
             border-radius: 8px;
             border: 1px solid var(--border-color);
-            display: none; /* ซ่อนไว้จนกว่าจะเลือกรูป */
+            display: none; 
         }
 
         .result-area {
@@ -132,16 +131,12 @@
 <body>
 
     <div class="container">
-        <h1>โปรแกรมอ่านตัวเลขจากภาพ</h1>
-        
-        <div class="uploader-area" id="uploader-area">
+        <h1>โปรแกรมอ่านข้อความจากภาพ</h1> <div class="uploader-area" id="uploader-area">
              <input type="file" id="image-input" accept="image/*">
              <p>คลิกเพื่อเลือก หรือลากไฟล์ภาพมาวางที่นี่</p>
         </div>
 
-        <button id="run-button" disabled>อ่านตัวเลขจากภาพ</button>
-
-        <img id="image-preview" src="#" alt="ตัวอย่างภาพ">
+        <button id="run-button" disabled>อ่านข้อความจากภาพ</button> <img id="image-preview" src="#" alt="ตัวอย่างภาพ">
 
         <div class="result-area">
             <p id="status">สถานะ: กรุณาเลือกรูปภาพ</p>
@@ -150,7 +145,6 @@
     </div>
 
     <script>
-        // === DOM Elements ===
         const imageInput = document.getElementById('image-input');
         const uploaderArea = document.getElementById('uploader-area');
         const runButton = document.getElementById('run-button');
@@ -160,18 +154,12 @@
 
         let selectedFile = null;
 
-        // === Event Listeners ===
-
-        // ทำให้สามารถคลิกที่กรอบเพื่อเลือกไฟล์ได้
         uploaderArea.addEventListener('click', () => imageInput.click());
 
-        // จัดการเมื่อมีการเลือกไฟล์
         imageInput.addEventListener('change', (event) => {
             const files = event.target.files;
             if (files && files.length > 0) {
                 selectedFile = files[0];
-
-                // แสดงรูปภาพตัวอย่าง
                 const reader = new FileReader();
                 reader.onload = (e) => {
                     imagePreview.src = e.target.result;
@@ -179,7 +167,6 @@
                 };
                 reader.readAsDataURL(selectedFile);
                 
-                // อัปเดต UI
                 uploaderArea.querySelector('p').textContent = `ไฟล์ที่เลือก: ${selectedFile.name}`;
                 statusDisplay.textContent = 'สถานะ: พร้อมทำงาน';
                 resultText.textContent = '';
@@ -187,24 +174,23 @@
             }
         });
 
-        // จัดการเมื่อกดปุ่ม "อ่านตัวเลข"
         runButton.addEventListener('click', async () => {
             if (!selectedFile) {
                 alert('กรุณาเลือกรูปภาพก่อนครับ');
                 return;
             }
 
-            // ปิดการใช้งานปุ่มและล้างผลลัพธ์เก่า
             runButton.disabled = true;
             resultText.textContent = '';
             statusDisplay.textContent = 'สถานะ: กำลังเตรียมการ...';
 
-            // เริ่มทำงานกับ Tesseract.js
             try {
                 const scheduler = Tesseract.createScheduler();
-                const worker = await Tesseract.createWorker('eng', 1, {
+                
+                // เปลี่ยนแปลง: เพิ่มภาษาไทย ('tha') เข้าไปพร้อมกับภาษาอังกฤษ ('eng')
+                // การโหลดครั้งแรกอาจใช้เวลานานขึ้นเล็กน้อยเพราะต้องโหลดโมเดล 2 ภาษา
+                const worker = await Tesseract.createWorker('eng+tha', 1, {
                     logger: m => {
-                        // อัปเดตสถานะการทำงานให้ผู้ใช้เห็น
                         if (m.status === 'recognizing text') {
                            const progress = (m.progress * 100).toFixed(2);
                            statusDisplay.textContent = `สถานะ: กำลังวิเคราะห์... ${progress}%`;
@@ -214,22 +200,16 @@
                     },
                 });
 
-                // ตั้งค่าให้ Tesseract อ่านเฉพาะตัวเลขและสัญลักษณ์ที่เกี่ยวข้อง
-                // เพื่อเพิ่มความแม่นยำ
-                await worker.setParameters({
-                    tessedit_char_whitelist: '0123456789.,-/', 
-                });
+                // เปลี่ยนแปลง: เราได้ลบส่วน worker.setParameters ที่มี whitelist ออกไปจากตรงนี้
+                // เพื่อให้ Tesseract สามารถอ่านตัวอักษรได้ทุกตัว
 
                 scheduler.addWorker(worker);
 
-                // เริ่มกระบวนการ OCR
                 const { data: { text } } = await scheduler.addJob('recognize', selectedFile);
                 
-                // แสดงผลลัพธ์
-                resultText.textContent = text || 'ไม่พบตัวเลขในภาพ';
+                resultText.textContent = text || 'ไม่พบข้อความในภาพ';
                 statusDisplay.textContent = 'สถานะ: การประมวลผลเสร็จสิ้น!';
 
-                // ปิดการทำงานของ worker เพื่อคืนหน่วยความจำ
                 await scheduler.terminate();
 
             } catch (error) {
@@ -237,7 +217,6 @@
                 statusDisplay.textContent = 'สถานะ: เกิดข้อผิดพลาด!';
                 resultText.textContent = 'ไม่สามารถประมวลผลภาพได้ กรุณาลองใหม่อีกครั้ง';
             } finally {
-                // เปิดใช้งานปุ่มอีกครั้ง
                 runButton.disabled = false;
             }
         });
