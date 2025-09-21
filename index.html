@@ -3,8 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>โปรแกรมอ่านตัวอักษรและตัวเลขจากภาพ</title> <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic" crossorigin>
+    <title>โปรแกรมอ่านข้อความจากภาพ</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;700&display=swap" rel="stylesheet">
     
     <script src='https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js'></script>
@@ -71,7 +72,7 @@
             display: none;
         }
 
-        button {
+        button#run-button {
             background-color: var(--primary-color);
             color: var(--white);
             border: none;
@@ -85,12 +86,12 @@
             width: 100%;
         }
 
-        button:disabled {
+        button#run-button:disabled {
             background-color: #a0c7ff;
             cursor: not-allowed;
         }
 
-        button:hover:not(:disabled) {
+        button#run-button:hover:not(:disabled) {
             background-color: #0056b3;
         }
         
@@ -114,33 +115,72 @@
             color: #6c757d;
         }
         
+        /* เปลี่ยนแปลง: เพิ่ม Wrapper เพื่อช่วยจัดตำแหน่งปุ่ม Copy */
+        .result-wrapper {
+            position: relative;
+        }
+
         #result-text {
             background-color: var(--light-gray);
             border: 1px solid var(--border-color);
             border-radius: 8px;
             padding: 1rem;
+            padding-right: 3rem; /* เพิ่มพื้นที่ด้านขวาสำหรับปุ่ม */
             font-size: 1.2rem;
             font-weight: 700;
-            color: var(--primary-color);
+            color: var(--dark-gray);
             min-height: 50px;
             white-space: pre-wrap;
             word-wrap: break-word;
+        }
+        
+        /* เปลี่ยนแปลง: สไตล์สำหรับปุ่ม Copy */
+        #copy-button {
+            position: absolute;
+            top: 0.75rem;
+            right: 0.75rem;
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            padding: 0.5rem;
+            border-radius: 6px;
+            display: none; /* ซ่อนไว้เป็นค่าเริ่มต้น */
+            transition: background-color 0.2s;
+        }
+
+        #copy-button:hover {
+            background-color: #e2e6ea;
+        }
+
+        #copy-button svg {
+            width: 20px;
+            height: 20px;
+            pointer-events: none; /* ทำให้คลิกทะลุ SVG ไปที่ปุ่มได้ */
         }
     </style>
 </head>
 <body>
 
     <div class="container">
-        <h1>โปรแกรมอ่านข้อความจากภาพ</h1> <div class="uploader-area" id="uploader-area">
+        <h1>โปรแกรมอ่านข้อความจากภาพ</h1>
+        
+        <div class="uploader-area" id="uploader-area">
              <input type="file" id="image-input" accept="image/*">
              <p>คลิกเพื่อเลือก หรือลากไฟล์ภาพมาวางที่นี่</p>
         </div>
 
-        <button id="run-button" disabled>อ่านข้อความจากภาพ</button> <img id="image-preview" src="#" alt="ตัวอย่างภาพ">
+        <button id="run-button" disabled>อ่านข้อความจากภาพ</button>
+
+        <img id="image-preview" src="#" alt="ตัวอย่างภาพ">
 
         <div class="result-area">
             <p id="status">สถานะ: กรุณาเลือกรูปภาพ</p>
-            <div id="result-text"></div>
+            <div class="result-wrapper">
+                <div id="result-text"></div>
+                <button id="copy-button" title="คัดลอกข้อความ">
+                    <svg id="copy-icon" fill="#6c757d" viewBox="0 0 16 16"><path d="M13 0H6a2 2 0 0 0-2 2 2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h7a2 2 0 0 0 2-2 2 2 0 0 0 2-2V2a2 2 0 0 0-2-2Zm0 14H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h7a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1ZM4 1a1 1 0 0 1 1-1h2a1 1 0 0 1 0 2H5a1 1 0 0 1-1-1Z"/></svg>
+                </button>
+            </div>
         </div>
     </div>
 
@@ -151,7 +191,14 @@
         const imagePreview = document.getElementById('image-preview');
         const statusDisplay = document.getElementById('status');
         const resultText = document.getElementById('result-text');
+        
+        // เปลี่ยนแปลง: เพิ่มตัวแปรสำหรับปุ่ม Copy
+        const copyButton = document.getElementById('copy-button');
 
+        // ไอคอนสำหรับใช้สลับ
+        const copyIconSVG = `<svg id="copy-icon" fill="#6c757d" viewBox="0 0 16 16"><path d="M13 0H6a2 2 0 0 0-2 2 2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h7a2 2 0 0 0 2-2 2 2 0 0 0 2-2V2a2 2 0 0 0-2-2Zm0 14H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h7a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1ZM4 1a1 1 0 0 1 1-1h2a1 1 0 0 1 0 2H5a1 1 0 0 1-1-1Z"/></svg>`;
+        const checkIconSVG = `<svg id="check-icon" fill="#28a745" viewBox="0 0 16 16"><path d="M12.736 3.97a.733.733 0 0 1 1.047 0c.286.289.29.756.01 1.05L7.88 12.01a.733.733 0 0 1-1.065.02L3.217 8.384a.757.757 0 0 1 0-1.06.733.733 0 0 1 1.047 0l3.052 3.093 5.4-6.425a.247.247 0 0 1 .02-.022Z"/></svg>`;
+        
         let selectedFile = null;
 
         uploaderArea.addEventListener('click', () => imageInput.click());
@@ -171,44 +218,41 @@
                 statusDisplay.textContent = 'สถานะ: พร้อมทำงาน';
                 resultText.textContent = '';
                 runButton.disabled = false;
+                copyButton.style.display = 'none'; // ซ่อนปุ่ม copy เมื่อเลือกไฟล์ใหม่
             }
         });
 
         runButton.addEventListener('click', async () => {
-            if (!selectedFile) {
-                alert('กรุณาเลือกรูปภาพก่อนครับ');
-                return;
-            }
+            if (!selectedFile) return;
 
             runButton.disabled = true;
+            copyButton.style.display = 'none'; // ซ่อนปุ่ม copy ตอนเริ่มทำงาน
             resultText.textContent = '';
             statusDisplay.textContent = 'สถานะ: กำลังเตรียมการ...';
 
             try {
                 const scheduler = Tesseract.createScheduler();
-                
-                // เปลี่ยนแปลง: เพิ่มภาษาไทย ('tha') เข้าไปพร้อมกับภาษาอังกฤษ ('eng')
-                // การโหลดครั้งแรกอาจใช้เวลานานขึ้นเล็กน้อยเพราะต้องโหลดโมเดล 2 ภาษา
                 const worker = await Tesseract.createWorker('eng+tha', 1, {
                     logger: m => {
                         if (m.status === 'recognizing text') {
-                           const progress = (m.progress * 100).toFixed(2);
-                           statusDisplay.textContent = `สถานะ: กำลังวิเคราะห์... ${progress}%`;
+                           statusDisplay.textContent = `สถานะ: กำลังวิเคราะห์... ${(m.progress * 100).toFixed(0)}%`;
                         } else {
                            statusDisplay.textContent = `สถานะ: ${m.status}...`;
                         }
                     },
                 });
 
-                // เปลี่ยนแปลง: เราได้ลบส่วน worker.setParameters ที่มี whitelist ออกไปจากตรงนี้
-                // เพื่อให้ Tesseract สามารถอ่านตัวอักษรได้ทุกตัว
-
                 scheduler.addWorker(worker);
-
                 const { data: { text } } = await scheduler.addJob('recognize', selectedFile);
                 
-                resultText.textContent = text || 'ไม่พบข้อความในภาพ';
+                const result = text || 'ไม่พบข้อความในภาพ';
+                resultText.textContent = result;
                 statusDisplay.textContent = 'สถานะ: การประมวลผลเสร็จสิ้น!';
+
+                // เปลี่ยนแปลง: แสดงปุ่ม copy ถ้ามีข้อความ
+                if (text && text.trim() !== '') {
+                    copyButton.style.display = 'block';
+                }
 
                 await scheduler.terminate();
 
@@ -220,6 +264,30 @@
                 runButton.disabled = false;
             }
         });
+
+        // เปลี่ยนแปลง: เพิ่ม Event Listener สำหรับปุ่ม Copy
+        copyButton.addEventListener('click', () => {
+            const textToCopy = resultText.textContent;
+            
+            // ใช้ Clipboard API ในการคัดลอก
+            navigator.clipboard.writeText(textToCopy).then(() => {
+                // ถ้าสำเร็จ: เปลี่ยนไอคอนเป็นเครื่องหมายถูก
+                copyButton.innerHTML = checkIconSVG;
+                copyButton.title = 'คัดลอกแล้ว!';
+                
+                // ตั้งเวลา 2 วินาทีเพื่อเปลี่ยนไอคอนกลับเป็นเหมือนเดิม
+                setTimeout(() => {
+                    copyButton.innerHTML = copyIconSVG;
+                    copyButton.title = 'คัดลอกข้อความ';
+                }, 2000);
+
+            }).catch(err => {
+                // ถ้าไม่สำเร็จ
+                console.error('ไม่สามารถคัดลอกข้อความได้: ', err);
+                alert('เกิดข้อผิดพลาด ไม่สามารถคัดลอกข้อความได้');
+            });
+        });
+
     </script>
 </body>
 </html>
